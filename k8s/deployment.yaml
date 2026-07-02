@@ -29,6 +29,17 @@ spec:
             # Example: h2h-dev,h2h-sit,mobile-orchestration-sit
             - name: ALLOWED_NAMESPACES
               value: ""
+            - name: LOG_DIR
+              value: "/app/logs"
+            - name: LOG_FILE
+              value: "file-placement-dashboard.log"
+            # Optional: set official/internal logo URL if you want to use an image.
+            # When empty, the UI displays a styled Mashreq text lockup.
+            - name: MASHREQ_LOGO_URL
+              value: ""
+          volumeMounts:
+            - name: app-logs
+              mountPath: /app/logs
           resources:
             requests:
               cpu: 100m
@@ -36,6 +47,9 @@ spec:
             limits:
               cpu: 500m
               memory: 512Mi
+      volumes:
+        - name: app-logs
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
