@@ -136,10 +136,17 @@ with st.sidebar:
         st.error("kubectl not found in container/server PATH")
 
     try:
-        current_context = run_cmd(["kubectl", "config", "current-context"])
-        st.code(current_context)
-    except Exception as exc:
-        st.warning(f"kubectl context unavailable: {exc}")
+        if os.path.exists("/var/run/secrets/kubernetes.io/serviceaccount/token"):
+            st.success("Connected to Kubernetes (In-Cluster)")
+            running_namespace = open(
+                "/var/run/secrets/kubernetes.io/serviceaccount/namespace"
+            ).read().strip()
+            st.caption(f"Running in namespace: {running_namespace}")
+        else:
+            current_context = run_cmd(["kubectl", "config", "current-context"])
+            st.success(f"Connected to Kubernetes ({current_context})")
+    except Exception:
+        st.warning("Unable to determine Kubernetes connection.")
 
 uploaded_file = st.file_uploader("Upload file", type=None)
 
