@@ -37,300 +37,304 @@ console_handler = logging.StreamHandler()
 console_handler.setFormatter(formatter)
 logger.addHandler(console_handler)
 
-logger.info("Dashboard startup completed | log_path=%s | allowed_namespaces=%s", LOG_PATH, ALLOWED_NAMESPACES or "ALL")
+logger.info(
+    "Dashboard startup completed | log_path=%s | allowed_namespaces=%s",
+    LOG_PATH,
+    ALLOWED_NAMESPACES or "ALL",
+)
 
 st.set_page_config(page_title=APP_TITLE, page_icon="📁", layout="wide")
 
 
 PREMIUM_CSS = """
 <style>
-    :root {
-        --mashreq-orange: #f58220;
-        --mashreq-deep: #2b124c;
-        --mashreq-ink: #171321;
-        --mashreq-muted: #667085;
-        --mashreq-card: rgba(255, 255, 255, 0.92);
-        --mashreq-border: rgba(43, 18, 76, 0.12);
-    }
+:root {
+    --mashreq-orange: #f58220;
+    --mashreq-deep: #2b124c;
+    --mashreq-ink: #171321;
+    --mashreq-muted: #667085;
+    --mashreq-card: rgba(255, 255, 255, 0.92);
+    --mashreq-border: rgba(43, 18, 76, 0.12);
+}
 
-    .stApp {
-        background:
-            radial-gradient(circle at top left, rgba(245, 130, 32, 0.20), transparent 28%),
-            radial-gradient(circle at top right, rgba(43, 18, 76, 0.20), transparent 30%),
-            linear-gradient(135deg, #fff8f1 0%, #f7f4fb 45%, #ffffff 100%);
-        color: var(--mashreq-ink);
-    }
+.stApp {
+    background:
+        radial-gradient(circle at top left, rgba(245, 130, 32, 0.20), transparent 28%),
+        radial-gradient(circle at top right, rgba(43, 18, 76, 0.20), transparent 30%),
+        linear-gradient(135deg, #fff8f1 0%, #f7f4fb 45%, #ffffff 100%);
+    color: var(--mashreq-ink);
+}
 
-    section[data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #2b124c 0%, #3c1768 52%, #1f1232 100%);
-        border-right: 1px solid rgba(255, 255, 255, 0.12);
-    }
+section[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, #2b124c 0%, #3c1768 52%, #1f1232 100%);
+    border-right: 1px solid rgba(255, 255, 255, 0.12);
+}
 
-    section[data-testid="stSidebar"] * {
-        color: #ffffff !important;
-    }
+section[data-testid="stSidebar"] * {
+    color: #ffffff !important;
+}
 
-    div[data-testid="stSidebarUserContent"] {
-        padding-top: 1.5rem;
-    }
+div[data-testid="stSidebarUserContent"] {
+    padding-top: 1.5rem;
+}
 
-    .main .block-container {
-        padding-top: 1.25rem;
-        max-width: 1200px;
-    }
+.main .block-container {
+    padding-top: 1.25rem;
+    max-width: 1200px;
+}
 
-    .mashreq-hero {
-        padding: 2rem;
-        border-radius: 28px;
-        background: linear-gradient(135deg, #2b124c 0%, #4b1d78 52%, #f58220 140%);
-        color: #ffffff;
-        box-shadow: 0 24px 60px rgba(43, 18, 76, 0.22);
-        margin-bottom: 1.25rem;
-        position: relative;
-        overflow: hidden;
-    }
+.mashreq-hero {
+    padding: 2rem;
+    border-radius: 28px;
+    background: linear-gradient(135deg, #2b124c 0%, #4b1d78 52%, #f58220 140%);
+    color: #ffffff;
+    box-shadow: 0 24px 60px rgba(43, 18, 76, 0.22);
+    margin-bottom: 1.25rem;
+    position: relative;
+    overflow: hidden;
+}
 
-    .mashreq-hero::after {
-        content: "";
-        position: absolute;
-        width: 230px;
-        height: 230px;
-        right: -70px;
-        top: -70px;
-        background: rgba(245, 130, 32, 0.30);
-        border-radius: 50%;
-    }
+.mashreq-hero::after {
+    content: "";
+    position: absolute;
+    width: 230px;
+    height: 230px;
+    right: -70px;
+    top: -70px;
+    background: rgba(245, 130, 32, 0.30);
+    border-radius: 50%;
+}
 
-    .mashreq-logo-row {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 1rem;
-        margin-bottom: 1.2rem;
-        position: relative;
-        z-index: 2;
-    }
+.mashreq-logo-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.2rem;
+    position: relative;
+    z-index: 2;
+}
 
-    .mashreq-logo-lockup {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.75rem;
-        padding: 0.55rem 0.9rem;
-        border: 1px solid rgba(255, 255, 255, 0.22);
-        background: rgba(255, 255, 255, 0.12);
-        border-radius: 999px;
-        backdrop-filter: blur(10px);
-    }
+.mashreq-logo-lockup {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.55rem 0.9rem;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 999px;
+    backdrop-filter: blur(10px);
+}
 
-    .mashreq-logo-mark {
-        width: 34px;
-        height: 34px;
-        border-radius: 11px;
-        background: linear-gradient(135deg, #f58220 0%, #ffb060 100%);
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        color: #ffffff !important;
-        font-size: 1.1rem;
-        font-weight: 950;
-        box-shadow: 0 8px 18px rgba(245, 130, 32, 0.28);
-    }
+.mashreq-logo-mark {
+    width: 34px;
+    height: 34px;
+    border-radius: 11px;
+    background: linear-gradient(135deg, #f58220 0%, #ffb060 100%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff !important;
+    font-size: 1.1rem;
+    font-weight: 950;
+    box-shadow: 0 8px 18px rgba(245, 130, 32, 0.28);
+}
 
-    .mashreq-logo-img {
-        max-height: 34px;
-        max-width: 150px;
-        object-fit: contain;
-        display: block;
-    }
+.mashreq-logo-img {
+    max-height: 34px;
+    max-width: 150px;
+    object-fit: contain;
+    display: block;
+}
 
-    .mashreq-logo-text {
-        font-size: 1.15rem;
-        font-weight: 950;
-        letter-spacing: -0.03em;
-        color: #ffffff !important;
-        line-height: 1;
-    }
+.mashreq-logo-text {
+    font-size: 1.15rem;
+    font-weight: 950;
+    letter-spacing: -0.03em;
+    color: #ffffff !important;
+    line-height: 1;
+}
 
-    .mashreq-logo-subtitle {
-        font-size: 0.72rem;
-        font-weight: 700;
-        color: rgba(255, 255, 255, 0.74) !important;
-        margin-top: 0.12rem;
-        letter-spacing: 0.02em;
-    }
+.mashreq-logo-subtitle {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.74) !important;
+    margin-top: 0.12rem;
+    letter-spacing: 0.02em;
+}
 
-    .mashreq-secure-badge {
-        padding: 0.45rem 0.75rem;
-        border-radius: 999px;
-        background: rgba(255, 255, 255, 0.12);
-        border: 1px solid rgba(255, 255, 255, 0.18);
-        color: rgba(255, 255, 255, 0.82) !important;
-        font-size: 0.78rem;
-        font-weight: 800;
-        position: relative;
-        z-index: 2;
-    }
+.mashreq-secure-badge {
+    padding: 0.45rem 0.75rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    color: rgba(255, 255, 255, 0.82) !important;
+    font-size: 0.78rem;
+    font-weight: 800;
+    position: relative;
+    z-index: 2;
+}
 
-    .mashreq-hero h1 {
-        font-size: 2.6rem;
-        line-height: 1.1;
-        margin: 0 0 0.6rem 0;
-        color: #ffffff;
-        position: relative;
-        z-index: 2;
-    }
+.mashreq-hero h1 {
+    font-size: 2.6rem;
+    line-height: 1.1;
+    margin: 0 0 0.6rem 0;
+    color: #ffffff;
+    position: relative;
+    z-index: 2;
+}
 
-    .mashreq-hero p {
-        font-size: 1.05rem;
-        color: rgba(255, 255, 255, 0.84);
-        max-width: 780px;
-        margin: 0;
-        position: relative;
-        z-index: 2;
-    }
+.mashreq-hero p {
+    font-size: 1.05rem;
+    color: rgba(255, 255, 255, 0.84);
+    max-width: 780px;
+    margin: 0;
+    position: relative;
+    z-index: 2;
+}
 
-    .mashreq-card {
-        padding: 1.25rem;
-        border-radius: 22px;
-        background: var(--mashreq-card);
-        border: 1px solid var(--mashreq-border);
-        box-shadow: 0 14px 38px rgba(43, 18, 76, 0.08);
-        margin-bottom: 1rem;
-    }
+.mashreq-card {
+    padding: 1.25rem;
+    border-radius: 22px;
+    background: var(--mashreq-card);
+    border: 1px solid var(--mashreq-border);
+    box-shadow: 0 14px 38px rgba(43, 18, 76, 0.08);
+    margin-bottom: 1rem;
+}
 
-    .mashreq-section-title {
-        font-size: 1.05rem;
-        font-weight: 800;
-        color: var(--mashreq-deep);
-        margin-bottom: 0.25rem;
-    }
+.mashreq-section-title {
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: var(--mashreq-deep);
+    margin-bottom: 0.25rem;
+}
 
-    .mashreq-help {
-        color: var(--mashreq-muted);
-        font-size: 0.92rem;
-        margin-bottom: 0.75rem;
-    }
+.mashreq-help {
+    color: var(--mashreq-muted);
+    font-size: 0.92rem;
+    margin-bottom: 0.75rem;
+}
 
-    .namespace-pill {
-        display: inline-block;
-        padding: 0.35rem 0.75rem;
-        margin: 0.15rem 0.2rem 0.15rem 0;
-        border-radius: 999px;
-        background: rgba(245, 130, 32, 0.12);
-        color: #8a3f00;
-        border: 1px solid rgba(245, 130, 32, 0.22);
-        font-weight: 700;
-        font-size: 0.82rem;
-    }
+.namespace-pill {
+    display: inline-block;
+    padding: 0.35rem 0.75rem;
+    margin: 0.15rem 0.2rem 0.15rem 0;
+    border-radius: 999px;
+    background: rgba(245, 130, 32, 0.12);
+    color: #8a3f00;
+    border: 1px solid rgba(245, 130, 32, 0.22);
+    font-weight: 700;
+    font-size: 0.82rem;
+}
 
-    .sidebar-policy-card {
-        padding: 1rem;
-        margin-top: 0.75rem;
-        border-radius: 18px;
-        background: rgba(255, 255, 255, 0.10);
-        border: 1px solid rgba(255, 255, 255, 0.16);
-        box-shadow: 0 16px 34px rgba(0, 0, 0, 0.14);
-    }
+.sidebar-policy-card {
+    padding: 1rem;
+    margin-top: 0.75rem;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.10);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    box-shadow: 0 16px 34px rgba(0, 0, 0, 0.14);
+}
 
-    .sidebar-policy-title {
-        font-size: 0.95rem;
-        font-weight: 850;
-        color: #ffffff !important;
-        margin-bottom: 0.25rem;
-    }
+.sidebar-policy-title {
+    font-size: 0.95rem;
+    font-weight: 850;
+    color: #ffffff !important;
+    margin-bottom: 0.25rem;
+}
 
-    .sidebar-policy-desc {
-        font-size: 0.78rem;
-        line-height: 1.35;
-        color: rgba(255, 255, 255, 0.72) !important;
-        margin-bottom: 0.75rem;
-    }
+.sidebar-policy-desc {
+    font-size: 0.78rem;
+    line-height: 1.35;
+    color: rgba(255, 255, 255, 0.72) !important;
+    margin-bottom: 0.75rem;
+}
 
-    .sidebar-chip-wrap {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.45rem;
-    }
+.sidebar-chip-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+}
 
-    .sidebar-namespace-chip {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.35rem;
-        padding: 0.4rem 0.62rem;
-        border-radius: 999px;
-        background: rgba(245, 130, 32, 0.18);
-        border: 1px solid rgba(245, 130, 32, 0.42);
-        color: #ffffff !important;
-        font-size: 0.78rem;
-        font-weight: 800;
-        white-space: nowrap;
-    }
+.sidebar-namespace-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.4rem 0.62rem;
+    border-radius: 999px;
+    background: rgba(245, 130, 32, 0.18);
+    border: 1px solid rgba(245, 130, 32, 0.42);
+    color: #ffffff !important;
+    font-size: 0.78rem;
+    font-weight: 800;
+    white-space: nowrap;
+}
 
-    .sidebar-namespace-chip::before {
-        content: "";
-        width: 7px;
-        height: 7px;
-        border-radius: 999px;
-        background: #f58220;
-        box-shadow: 0 0 0 4px rgba(245, 130, 32, 0.16);
-    }
+.sidebar-namespace-chip::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    border-radius: 999px;
+    background: #f58220;
+    box-shadow: 0 0 0 4px rgba(245, 130, 32, 0.16);
+}
 
-    .sidebar-open-scope {
-        padding: 0.65rem;
-        border-radius: 14px;
-        background: rgba(245, 130, 32, 0.16);
-        border: 1px solid rgba(245, 130, 32, 0.34);
-        color: #ffffff !important;
-        font-size: 0.82rem;
-        font-weight: 750;
-    }
+.sidebar-open-scope {
+    padding: 0.65rem;
+    border-radius: 14px;
+    background: rgba(245, 130, 32, 0.16);
+    border: 1px solid rgba(245, 130, 32, 0.34);
+    color: #ffffff !important;
+    font-size: 0.82rem;
+    font-weight: 750;
+}
 
-    .log-path-box {
-        padding: 0.65rem;
-        margin-top: 0.75rem;
-        border-radius: 14px;
-        background: rgba(255, 255, 255, 0.10);
-        border: 1px solid rgba(255, 255, 255, 0.16);
-        font-size: 0.74rem;
-        word-break: break-all;
-    }
+.log-path-box {
+    padding: 0.65rem;
+    margin-top: 0.75rem;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.10);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    font-size: 0.74rem;
+    word-break: break-all;
+}
 
-    div.stButton > button:first-child {
-        background: linear-gradient(135deg, #f58220 0%, #ff9b3d 100%);
-        color: #ffffff;
-        border: 0;
-        border-radius: 14px;
-        padding: 0.75rem 1.2rem;
-        font-weight: 800;
-        box-shadow: 0 12px 24px rgba(245, 130, 32, 0.26);
-    }
+div.stButton > button:first-child {
+    background: linear-gradient(135deg, #f58220 0%, #ff9b3d 100%);
+    color: #ffffff;
+    border: 0;
+    border-radius: 14px;
+    padding: 0.75rem 1.2rem;
+    font-weight: 800;
+    box-shadow: 0 12px 24px rgba(245, 130, 32, 0.26);
+}
 
-    div.stButton > button:first-child:hover {
-        border: 0;
-        transform: translateY(-1px);
-        box-shadow: 0 16px 30px rgba(245, 130, 32, 0.32);
-    }
+div.stButton > button:first-child:hover {
+    border: 0;
+    transform: translateY(-1px);
+    box-shadow: 0 16px 30px rgba(245, 130, 32, 0.32);
+}
 
-    div[data-testid="stFileUploader"] section {
-        border-radius: 18px;
-        border: 1.5px dashed rgba(245, 130, 32, 0.45);
-        background: rgba(255, 255, 255, 0.78);
-    }
+div[data-testid="stFileUploader"] section {
+    border-radius: 18px;
+    border: 1.5px dashed rgba(245, 130, 32, 0.45);
+    background: rgba(255, 255, 255, 0.78);
+}
 
-    div[data-testid="stStatusWidget"] {
-        border-radius: 18px;
-    }
+div[data-testid="stStatusWidget"] {
+    border-radius: 18px;
+}
 
-    .footer-note {
-        text-align: center;
-        color: var(--mashreq-muted);
-        font-size: 0.82rem;
-        padding: 1rem 0 0.25rem;
-    }
+.footer-note {
+    text-align: center;
+    color: var(--mashreq-muted);
+    font-size: 0.82rem;
+    padding: 1rem 0 0.25rem;
+}
 </style>
 """
 
-st.markdown(PREMIUM_CSS, unsafe_allow_html=True)
+st.html(PREMIUM_CSS)
 
 
 class CommandError(Exception):
@@ -458,21 +462,25 @@ def list_destination_dir(
     return run_cmd(cmd)
 
 
+def render_html(html: str) -> None:
+    st.html(html)
+
+
 def mashreq_logo_html() -> str:
     if MASHREQ_LOGO_URL:
         logo = f"<img class='mashreq-logo-img' src='{MASHREQ_LOGO_URL}' alt='Mashreq logo' />"
     else:
         logo = "<span class='mashreq-logo-mark'>M</span>"
 
-    return f"""
-    <div class="mashreq-logo-lockup">
-        {logo}
-        <div>
-            <div class="mashreq-logo-text">mashreq</div>
-            <div class="mashreq-logo-subtitle">Internal DevOps</div>
-        </div>
-    </div>
-    """
+    return (
+        "<div class='mashreq-logo-lockup'>"
+        f"{logo}"
+        "<div>"
+        "<div class='mashreq-logo-text'>mashreq</div>"
+        "<div class='mashreq-logo-subtitle'>Internal DevOps</div>"
+        "</div>"
+        "</div>"
+    )
 
 
 def namespace_policy_html() -> str:
@@ -487,39 +495,36 @@ def namespace_policy_html() -> str:
 
 def sidebar_namespace_policy_html() -> str:
     if not ALLOWED_NAMESPACES:
-        return """
-        <div class="sidebar-policy-card">
-            <div class="sidebar-policy-title">Namespace policy</div>
-            <div class="sidebar-policy-desc">No namespace restriction is configured.</div>
-            <div class="sidebar-open-scope">All namespaces visible if RBAC allows it</div>
-        </div>
-        """
+        return (
+            "<div class='sidebar-policy-card'>"
+            "<div class='sidebar-policy-title'>Namespace policy</div>"
+            "<div class='sidebar-policy-desc'>No namespace restriction is configured.</div>"
+            "<div class='sidebar-open-scope'>All namespaces visible if RBAC allows it</div>"
+            "</div>"
+        )
 
     chips = "".join(
         f"<span class='sidebar-namespace-chip'>{namespace}</span>"
         for namespace in ALLOWED_NAMESPACES
     )
-    return f"""
-    <div class="sidebar-policy-card">
-        <div class="sidebar-policy-title">Namespace policy</div>
-        <div class="sidebar-policy-desc">Uploads are restricted by <b>ALLOWED_NAMESPACES</b>.</div>
-        <div class="sidebar-chip-wrap">{chips}</div>
-    </div>
-    """
+    return (
+        "<div class='sidebar-policy-card'>"
+        "<div class='sidebar-policy-title'>Namespace policy</div>"
+        "<div class='sidebar-policy-desc'>Uploads are restricted by <b>ALLOWED_NAMESPACES</b>.</div>"
+        f"<div class='sidebar-chip-wrap'>{chips}</div>"
+        "</div>"
+    )
 
 
-st.markdown(
-    f"""
-    <div class="mashreq-hero">
-        <div class="mashreq-logo-row">
-            {mashreq_logo_html()}
-            <div class="mashreq-secure-badge">Secure file placement</div>
-        </div>
-        <h1>File Placement Dashboard</h1>
-        <p>Upload approved files directly into Kubernetes pods with controlled namespace access, pod discovery, container selection, and post-copy verification.</p>
-    </div>
-    """,
-    unsafe_allow_html=True,
+render_html(
+    "<div class='mashreq-hero'>"
+    "<div class='mashreq-logo-row'>"
+    f"{mashreq_logo_html()}"
+    "<div class='mashreq-secure-badge'>Secure file placement</div>"
+    "</div>"
+    "<h1>File Placement Dashboard</h1>"
+    "<p>Upload approved files directly into Kubernetes pods with controlled namespace access, pod discovery, container selection, and post-copy verification.</p>"
+    "</div>"
 )
 
 with st.sidebar:
@@ -547,31 +552,22 @@ with st.sidebar:
         logger.exception("Unable to determine Kubernetes connection")
 
     st.markdown("---")
-    st.markdown(sidebar_namespace_policy_html(), unsafe_allow_html=True)
-    st.markdown(
-        f"<div class='log-path-box'>Logs: <b>{LOG_PATH}</b></div>",
-        unsafe_allow_html=True,
-    )
+    render_html(sidebar_namespace_policy_html())
+    render_html(f"<div class='log-path-box'>Logs: <b>{LOG_PATH}</b></div>")
 
-st.markdown(
-    f"""
-    <div class="mashreq-card">
-        <div class="mashreq-section-title">Allowed namespace scope</div>
-        <div class="mashreq-help">Manage this list using the <b>ALLOWED_NAMESPACES</b> environment variable.</div>
-        {namespace_policy_html()}
-    </div>
-    """,
-    unsafe_allow_html=True,
+render_html(
+    "<div class='mashreq-card'>"
+    "<div class='mashreq-section-title'>Allowed namespace scope</div>"
+    "<div class='mashreq-help'>Manage this list using the <b>ALLOWED_NAMESPACES</b> environment variable.</div>"
+    f"{namespace_policy_html()}"
+    "</div>"
 )
 
-st.markdown(
-    """
-    <div class="mashreq-card">
-        <div class="mashreq-section-title">Upload file</div>
-        <div class="mashreq-help">Choose a file from your machine. The file is temporarily stored only during the copy operation.</div>
-    </div>
-    """,
-    unsafe_allow_html=True,
+render_html(
+    "<div class='mashreq-card'>"
+    "<div class='mashreq-section-title'>Upload file</div>"
+    "<div class='mashreq-help'>Choose a file from your machine. The file is temporarily stored only during the copy operation.</div>"
+    "</div>"
 )
 
 uploaded_file = st.file_uploader("Upload file", type=None, label_visibility="collapsed")
@@ -579,14 +575,11 @@ uploaded_file = st.file_uploader("Upload file", type=None, label_visibility="col
 col1, col2 = st.columns(2, gap="large")
 
 with col1:
-    st.markdown(
-        """
-        <div class="mashreq-card">
-            <div class="mashreq-section-title">Target pod</div>
-            <div class="mashreq-help">Select an allowed namespace and provide unique pod search text.</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
+    render_html(
+        "<div class='mashreq-card'>"
+        "<div class='mashreq-section-title'>Target pod</div>"
+        "<div class='mashreq-help'>Select an allowed namespace and provide unique pod search text.</div>"
+        "</div>"
     )
 
     try:
@@ -600,14 +593,11 @@ with col1:
     pod_search = st.text_input("Pod name contains", value="file-processor")
 
 with col2:
-    st.markdown(
-        """
-        <div class="mashreq-card">
-            <div class="mashreq-section-title">Destination</div>
-            <div class="mashreq-help">Use an absolute path inside the target container.</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
+    render_html(
+        "<div class='mashreq-card'>"
+        "<div class='mashreq-section-title'>Destination</div>"
+        "<div class='mashreq-help'>Use an absolute path inside the target container.</div>"
+        "</div>"
     )
 
     destination_path = st.text_input("Destination path inside pod", value="/tmp/sample.txt")
@@ -637,7 +627,11 @@ if namespace and pod_search:
             st.warning("No matching pod found.")
     except Exception as exc:
         st.error(f"Unable to resolve pod/container: {exc}")
-        logger.exception("Unable to resolve pod/container | namespace=%s | pod_search=%s", namespace, pod_search)
+        logger.exception(
+            "Unable to resolve pod/container | namespace=%s | pod_search=%s",
+            namespace,
+            pod_search,
+        )
 
 copy_clicked = st.button("Copy uploaded file to pod", type="primary")
 
@@ -666,7 +660,12 @@ if copy_clicked:
     upload_size_mb = len(uploaded_file.getvalue()) / (1024 * 1024)
     if upload_size_mb > MAX_UPLOAD_MB:
         st.error(f"File is too large. Limit is {MAX_UPLOAD_MB} MB.")
-        logger.warning("Blocked oversized upload | file=%s | size_mb=%.2f | limit_mb=%s", uploaded_file.name, upload_size_mb, MAX_UPLOAD_MB)
+        logger.warning(
+            "Blocked oversized upload | file=%s | size_mb=%.2f | limit_mb=%s",
+            uploaded_file.name,
+            upload_size_mb,
+            MAX_UPLOAD_MB,
+        )
         st.stop()
 
     safe_name = safe_uploaded_filename(uploaded_file.name)
@@ -721,11 +720,16 @@ if copy_clicked:
             )
             st.success("File copied successfully.")
         except Exception as exc:
-            logger.exception("Copy failed | file=%s | namespace=%s | pod=%s | destination=%s", safe_name, namespace, resolved_pod, destination_path)
+            logger.exception(
+                "Copy failed | file=%s | namespace=%s | pod=%s | destination=%s",
+                safe_name,
+                namespace,
+                resolved_pod,
+                destination_path,
+            )
             st.error(f"Copy failed: {exc}")
             st.info("Note: kubectl cp requires tar inside the target container. If tar is missing, use the fallback command described in README.md.")
 
-st.markdown(
-    "<div class='footer-note'>Mashreq Internal DevOps Utility · Controlled Kubernetes File Placement</div>",
-    unsafe_allow_html=True,
+render_html(
+    "<div class='footer-note'>Mashreq Internal DevOps Utility · Controlled Kubernetes File Placement</div>"
 )
