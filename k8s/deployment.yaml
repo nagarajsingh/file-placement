@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: file-placement-dashboard
+  namespace: default
+  labels:
+    app: file-placement-dashboard
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: file-placement-dashboard
+  template:
+    metadata:
+      labels:
+        app: file-placement-dashboard
+    spec:
+      serviceAccountName: file-placement-dashboard
+      containers:
+        - name: file-placement-dashboard
+          image: file-placement-dashboard:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8501
+          env:
+            - name: MAX_UPLOAD_MB
+              value: "50"
+            # Optional: restrict namespaces shown in UI, comma separated.
+            # Example: h2h-dev,h2h-sit,mobile-orchestration-sit
+            - name: ALLOWED_NAMESPACES
+              value: ""
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: file-placement-dashboard
+  namespace: default
+spec:
+  type: ClusterIP
+  selector:
+    app: file-placement-dashboard
+  ports:
+    - name: http
+      port: 8501
+      targetPort: 8501
