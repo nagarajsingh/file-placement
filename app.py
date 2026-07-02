@@ -1,7 +1,9 @@
+import logging
 import os
 import shutil
 import subprocess
 import tempfile
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import List, Optional
 
@@ -10,12 +12,32 @@ import streamlit as st
 
 APP_TITLE = "Kubernetes File Placement Dashboard"
 MAX_UPLOAD_MB = int(os.getenv("MAX_UPLOAD_MB", "50"))
+LOG_DIR = os.getenv("LOG_DIR", "/app/logs")
+LOG_FILE = os.getenv("LOG_FILE", "file-placement-dashboard.log")
+MASHREQ_LOGO_URL = os.getenv("MASHREQ_LOGO_URL", "")
 ALLOWED_NAMESPACES = [
     ns.strip()
     for ns in os.getenv("ALLOWED_NAMESPACES", "").split(",")
     if ns.strip()
 ]
 
+Path(LOG_DIR).mkdir(parents=True, exist_ok=True)
+LOG_PATH = str(Path(LOG_DIR) / LOG_FILE)
+
+logger = logging.getLogger("file-placement-dashboard")
+logger.setLevel(logging.INFO)
+logger.handlers.clear()
+formatter = logging.Formatter("%(asctime)s | %(levelname)s | %(message)s")
+
+file_handler = RotatingFileHandler(LOG_PATH, maxBytes=5 * 1024 * 1024, backupCount=5)
+file_handler.setFormatter(formatter)
+logger.addHandler(file_handler)
+
+console_handler = logging.StreamHandler()
+console_handler.setFormatter(formatter)
+logger.addHandler(console_handler)
+
+logger.info("Dashboard startup completed | log_path=%s | allowed_namespaces=%s", LOG_PATH, ALLOWED_NAMESPACES or "ALL")
 
 st.set_page_config(page_title=APP_TITLE, page_icon="📁", layout="wide")
 
@@ -29,7 +51,6 @@ PREMIUM_CSS = """
         --mashreq-muted: #667085;
         --mashreq-card: rgba(255, 255, 255, 0.92);
         --mashreq-border: rgba(43, 18, 76, 0.12);
-        --mashreq-bg: #f7f4fb;
     }
 
     .stApp {
@@ -80,25 +101,74 @@ PREMIUM_CSS = """
         border-radius: 50%;
     }
 
-    .mashreq-brand {
-        display: inline-flex;
+    .mashreq-logo-row {
+        display: flex;
         align-items: center;
-        gap: 0.6rem;
-        padding: 0.45rem 0.9rem;
-        border: 1px solid rgba(255, 255, 255, 0.24);
-        background: rgba(255, 255, 255, 0.12);
-        border-radius: 999px;
-        font-weight: 700;
-        letter-spacing: 0.02em;
-        margin-bottom: 1rem;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: 1.2rem;
+        position: relative;
+        z-index: 2;
     }
 
-    .mashreq-dot {
-        width: 10px;
-        height: 10px;
-        background: var(--mashreq-orange);
-        border-radius: 50%;
-        box-shadow: 0 0 0 6px rgba(245, 130, 32, 0.18);
+    .mashreq-logo-lockup {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.55rem 0.9rem;
+        border: 1px solid rgba(255, 255, 255, 0.22);
+        background: rgba(255, 255, 255, 0.12);
+        border-radius: 999px;
+        backdrop-filter: blur(10px);
+    }
+
+    .mashreq-logo-mark {
+        width: 34px;
+        height: 34px;
+        border-radius: 11px;
+        background: linear-gradient(135deg, #f58220 0%, #ffb060 100%);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: #ffffff !important;
+        font-size: 1.1rem;
+        font-weight: 950;
+        box-shadow: 0 8px 18px rgba(245, 130, 32, 0.28);
+    }
+
+    .mashreq-logo-img {
+        max-height: 34px;
+        max-width: 150px;
+        object-fit: contain;
+        display: block;
+    }
+
+    .mashreq-logo-text {
+        font-size: 1.15rem;
+        font-weight: 950;
+        letter-spacing: -0.03em;
+        color: #ffffff !important;
+        line-height: 1;
+    }
+
+    .mashreq-logo-subtitle {
+        font-size: 0.72rem;
+        font-weight: 700;
+        color: rgba(255, 255, 255, 0.74) !important;
+        margin-top: 0.12rem;
+        letter-spacing: 0.02em;
+    }
+
+    .mashreq-secure-badge {
+        padding: 0.45rem 0.75rem;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.12);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        color: rgba(255, 255, 255, 0.82) !important;
+        font-size: 0.78rem;
+        font-weight: 800;
+        position: relative;
+        z-index: 2;
     }
 
     .mashreq-hero h1 {
@@ -106,6 +176,8 @@ PREMIUM_CSS = """
         line-height: 1.1;
         margin: 0 0 0.6rem 0;
         color: #ffffff;
+        position: relative;
+        z-index: 2;
     }
 
     .mashreq-hero p {
@@ -113,6 +185,8 @@ PREMIUM_CSS = """
         color: rgba(255, 255, 255, 0.84);
         max-width: 780px;
         margin: 0;
+        position: relative;
+        z-index: 2;
     }
 
     .mashreq-card {
@@ -161,7 +235,6 @@ PREMIUM_CSS = """
     .sidebar-policy-title {
         font-size: 0.95rem;
         font-weight: 850;
-        letter-spacing: 0.01em;
         color: #ffffff !important;
         margin-bottom: 0.25rem;
     }
@@ -212,6 +285,16 @@ PREMIUM_CSS = """
         font-weight: 750;
     }
 
+    .log-path-box {
+        padding: 0.65rem;
+        margin-top: 0.75rem;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.10);
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        font-size: 0.74rem;
+        word-break: break-all;
+    }
+
     div.stButton > button:first-child {
         background: linear-gradient(135deg, #f58220 0%, #ff9b3d 100%);
         color: #ffffff;
@@ -254,6 +337,11 @@ class CommandError(Exception):
     pass
 
 
+def audit(message: str, **kwargs) -> None:
+    details = " | ".join(f"{key}={value}" for key, value in kwargs.items())
+    logger.info("%s%s", message, f" | {details}" if details else "")
+
+
 def run_cmd(cmd: List[str], timeout: int = 60) -> str:
     result = subprocess.run(
         cmd,
@@ -264,7 +352,9 @@ def run_cmd(cmd: List[str], timeout: int = 60) -> str:
     )
     if result.returncode != 0:
         message = result.stderr.strip() or result.stdout.strip() or "Command failed"
+        logger.error("Command failed | command=%s | error=%s", " ".join(cmd), message)
         raise CommandError(message)
+    logger.info("Command completed | command=%s", " ".join(cmd))
     return result.stdout.strip()
 
 
@@ -368,6 +458,23 @@ def list_destination_dir(
     return run_cmd(cmd)
 
 
+def mashreq_logo_html() -> str:
+    if MASHREQ_LOGO_URL:
+        logo = f"<img class='mashreq-logo-img' src='{MASHREQ_LOGO_URL}' alt='Mashreq logo' />"
+    else:
+        logo = "<span class='mashreq-logo-mark'>M</span>"
+
+    return f"""
+    <div class="mashreq-logo-lockup">
+        {logo}
+        <div>
+            <div class="mashreq-logo-text">mashreq</div>
+            <div class="mashreq-logo-subtitle">Internal DevOps</div>
+        </div>
+    </div>
+    """
+
+
 def namespace_policy_html() -> str:
     if not ALLOWED_NAMESPACES:
         return "<span class='namespace-pill'>All namespaces visible</span>"
@@ -402,9 +509,12 @@ def sidebar_namespace_policy_html() -> str:
 
 
 st.markdown(
-    """
+    f"""
     <div class="mashreq-hero">
-        <div class="mashreq-brand"><span class="mashreq-dot"></span> Mashreq Internal DevOps</div>
+        <div class="mashreq-logo-row">
+            {mashreq_logo_html()}
+            <div class="mashreq-secure-badge">Secure file placement</div>
+        </div>
         <h1>File Placement Dashboard</h1>
         <p>Upload approved files directly into Kubernetes pods with controlled namespace access, pod discovery, container selection, and post-copy verification.</p>
     </div>
@@ -426,15 +536,22 @@ with st.sidebar:
                 "/var/run/secrets/kubernetes.io/serviceaccount/namespace"
             ).read().strip()
             st.caption(f"Mode: In-Cluster | Namespace: {running_namespace}")
+            audit("Kubernetes connection detected", mode="in-cluster", namespace=running_namespace)
         else:
             current_context = run_cmd(["kubectl", "config", "current-context"])
             st.success("Connected to Kubernetes")
             st.caption(f"Context: {current_context}")
+            audit("Kubernetes connection detected", mode="kubeconfig", context=current_context)
     except Exception:
         st.warning("Unable to determine Kubernetes connection.")
+        logger.exception("Unable to determine Kubernetes connection")
 
     st.markdown("---")
     st.markdown(sidebar_namespace_policy_html(), unsafe_allow_html=True)
+    st.markdown(
+        f"<div class='log-path-box'>Logs: <b>{LOG_PATH}</b></div>",
+        unsafe_allow_html=True,
+    )
 
 st.markdown(
     f"""
@@ -477,6 +594,7 @@ with col1:
     except Exception as exc:
         namespaces = []
         st.error(f"Unable to load namespaces: {exc}")
+        logger.exception("Unable to load namespaces")
 
     namespace = st.selectbox("Namespace", namespaces, index=0 if namespaces else None)
     pod_search = st.text_input("Pod name contains", value="file-processor")
@@ -519,6 +637,7 @@ if namespace and pod_search:
             st.warning("No matching pod found.")
     except Exception as exc:
         st.error(f"Unable to resolve pod/container: {exc}")
+        logger.exception("Unable to resolve pod/container | namespace=%s | pod_search=%s", namespace, pod_search)
 
 copy_clicked = st.button("Copy uploaded file to pod", type="primary")
 
@@ -533,6 +652,7 @@ if copy_clicked:
 
     if ALLOWED_NAMESPACES and namespace not in ALLOWED_NAMESPACES:
         st.error(f"Namespace '{namespace}' is not allowed. Update ALLOWED_NAMESPACES to enable it.")
+        logger.warning("Blocked upload attempt to disallowed namespace | namespace=%s", namespace)
         st.stop()
 
     if not resolved_pod:
@@ -546,9 +666,19 @@ if copy_clicked:
     upload_size_mb = len(uploaded_file.getvalue()) / (1024 * 1024)
     if upload_size_mb > MAX_UPLOAD_MB:
         st.error(f"File is too large. Limit is {MAX_UPLOAD_MB} MB.")
+        logger.warning("Blocked oversized upload | file=%s | size_mb=%.2f | limit_mb=%s", uploaded_file.name, upload_size_mb, MAX_UPLOAD_MB)
         st.stop()
 
     safe_name = safe_uploaded_filename(uploaded_file.name)
+    audit(
+        "Upload copy requested",
+        file=safe_name,
+        size_mb=round(upload_size_mb, 3),
+        namespace=namespace,
+        pod=resolved_pod,
+        container=selected_container or "default",
+        destination=destination_path,
+    )
 
     with tempfile.TemporaryDirectory() as tmpdir:
         local_path = os.path.join(tmpdir, safe_name)
@@ -581,8 +711,17 @@ if copy_clicked:
 
                 status.update(label="File copied and verified", state="complete")
 
+            audit(
+                "Upload copy completed",
+                file=safe_name,
+                namespace=namespace,
+                pod=resolved_pod,
+                container=selected_container or "default",
+                destination=destination_path,
+            )
             st.success("File copied successfully.")
         except Exception as exc:
+            logger.exception("Copy failed | file=%s | namespace=%s | pod=%s | destination=%s", safe_name, namespace, resolved_pod, destination_path)
             st.error(f"Copy failed: {exc}")
             st.info("Note: kubectl cp requires tar inside the target container. If tar is missing, use the fallback command described in README.md.")
 
