@@ -149,6 +149,69 @@ PREMIUM_CSS = """
         font-size: 0.82rem;
     }
 
+    .sidebar-policy-card {
+        padding: 1rem;
+        margin-top: 0.75rem;
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.10);
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        box-shadow: 0 16px 34px rgba(0, 0, 0, 0.14);
+    }
+
+    .sidebar-policy-title {
+        font-size: 0.95rem;
+        font-weight: 850;
+        letter-spacing: 0.01em;
+        color: #ffffff !important;
+        margin-bottom: 0.25rem;
+    }
+
+    .sidebar-policy-desc {
+        font-size: 0.78rem;
+        line-height: 1.35;
+        color: rgba(255, 255, 255, 0.72) !important;
+        margin-bottom: 0.75rem;
+    }
+
+    .sidebar-chip-wrap {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.45rem;
+    }
+
+    .sidebar-namespace-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.4rem 0.62rem;
+        border-radius: 999px;
+        background: rgba(245, 130, 32, 0.18);
+        border: 1px solid rgba(245, 130, 32, 0.42);
+        color: #ffffff !important;
+        font-size: 0.78rem;
+        font-weight: 800;
+        white-space: nowrap;
+    }
+
+    .sidebar-namespace-chip::before {
+        content: "";
+        width: 7px;
+        height: 7px;
+        border-radius: 999px;
+        background: #f58220;
+        box-shadow: 0 0 0 4px rgba(245, 130, 32, 0.16);
+    }
+
+    .sidebar-open-scope {
+        padding: 0.65rem;
+        border-radius: 14px;
+        background: rgba(245, 130, 32, 0.16);
+        border: 1px solid rgba(245, 130, 32, 0.34);
+        color: #ffffff !important;
+        font-size: 0.82rem;
+        font-weight: 750;
+    }
+
     div.stButton > button:first-child {
         background: linear-gradient(135deg, #f58220 0%, #ff9b3d 100%);
         color: #ffffff;
@@ -315,6 +378,29 @@ def namespace_policy_html() -> str:
     )
 
 
+def sidebar_namespace_policy_html() -> str:
+    if not ALLOWED_NAMESPACES:
+        return """
+        <div class="sidebar-policy-card">
+            <div class="sidebar-policy-title">Namespace policy</div>
+            <div class="sidebar-policy-desc">No namespace restriction is configured.</div>
+            <div class="sidebar-open-scope">All namespaces visible if RBAC allows it</div>
+        </div>
+        """
+
+    chips = "".join(
+        f"<span class='sidebar-namespace-chip'>{namespace}</span>"
+        for namespace in ALLOWED_NAMESPACES
+    )
+    return f"""
+    <div class="sidebar-policy-card">
+        <div class="sidebar-policy-title">Namespace policy</div>
+        <div class="sidebar-policy-desc">Uploads are restricted by <b>ALLOWED_NAMESPACES</b>.</div>
+        <div class="sidebar-chip-wrap">{chips}</div>
+    </div>
+    """
+
+
 st.markdown(
     """
     <div class="mashreq-hero">
@@ -348,13 +434,7 @@ with st.sidebar:
         st.warning("Unable to determine Kubernetes connection.")
 
     st.markdown("---")
-    st.markdown("### Namespace policy")
-    if ALLOWED_NAMESPACES:
-        st.caption("Uploads are restricted by ALLOWED_NAMESPACES.")
-        for allowed_namespace in ALLOWED_NAMESPACES:
-            st.markdown(f"- `{allowed_namespace}`")
-    else:
-        st.warning("ALLOWED_NAMESPACES is empty. All namespaces are visible if RBAC allows it.")
+    st.markdown(sidebar_namespace_policy_html(), unsafe_allow_html=True)
 
 st.markdown(
     f"""
