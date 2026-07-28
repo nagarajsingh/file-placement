@@ -2,25 +2,24 @@ import logging
 import os
 import subprocess
 import tempfile
-from datetime import datetime
+import time
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import List, Optional
 
 import streamlit as st
 
-APP_TITLE = "File Placement Dashboard"
+APP_TITLE = "File Placement"
 MAX_UPLOAD_MB = int(os.getenv("MAX_UPLOAD_MB", "50"))
 LOG_DIR = os.getenv("LOG_DIR", "/app/logs")
 LOG_FILE = os.getenv("LOG_FILE", "file-placement-dashboard.log")
 MASHREQ_LOGO_URL = os.getenv("MASHREQ_LOGO_URL", "")
-APP_VERSION = os.getenv("APP_VERSION", "1.0.0")
 ALLOWED_NAMESPACES = [x.strip() for x in os.getenv("ALLOWED_NAMESPACES", "").split(",") if x.strip()]
+DESTINATION_FOLDERS = [x.strip() for x in os.getenv("DESTINATION_FOLDERS", "/tmp").split(",") if x.strip()]
 
 Path(LOG_DIR).mkdir(parents=True, exist_ok=True)
 LOG_PATH = str(Path(LOG_DIR) / LOG_FILE)
-
-logger = logging.getLogger("file-placement-dashboard")
+logger = logging.getLogger("file-placement")
 logger.setLevel(logging.INFO)
 logger.handlers.clear()
 fmt = logging.Formatter("%(asctime)s | %(levelname)s | %(message)s")
@@ -32,21 +31,31 @@ logger.addHandler(fh)
 logger.addHandler(sh)
 
 st.set_page_config(page_title=APP_TITLE, page_icon="📁", layout="wide")
-st.html("""
+
+CSS = """
 <style>
-.stApp{background:#f7f7fb}.main .block-container{max-width:1150px;padding-top:1.2rem}
-section[data-testid="stSidebar"]{background:linear-gradient(180deg,#17073d,#2b0b63 55%,#160733)}
-section[data-testid="stSidebar"] *{color:white!important}.brand{background:white;border-radius:18px;padding:1rem;text-align:center;margin-bottom:1rem}.brand img{max-width:150px;max-height:85px}.brand .name{font-size:1.7rem;font-weight:950;color:#185aa6!important}.brand .tag{color:#ff4b12!important;font-style:italic}.sidecard{padding:1rem;border-radius:16px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);margin-top:1rem}.chip{display:inline-block;margin:.16rem;padding:.35rem .6rem;border-radius:999px;background:rgba(245,130,32,.25);font-size:.78rem;font-weight:800}.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.3rem}.top h1{font-size:2.1rem;margin:0;color:#1a1247}.top p{margin:.25rem 0;color:#6d5e94}.conn{background:#eefaf2;border:1px solid #d3f1dc;border-radius:14px;padding:.8rem 1rem}.hero{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;align-items:center;padding:2rem;border-radius:24px;background:linear-gradient(120deg,#2a0b61,#4d167d 48%,#ff641f);margin-bottom:1.3rem;box-shadow:0 20px 55px rgba(36,16,79,.2)}.hero img{max-width:260px;max-height:105px}.fallback{font-size:2.2rem;font-weight:950;color:white}.hero h2,.hero p{color:white}.card{background:white;border:1px solid #e8e5f0;border-radius:18px;padding:1.25rem;box-shadow:0 10px 32px rgba(31,18,62,.07);margin-bottom:1rem}.card h3{margin-top:0;color:#1a1247}.status{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1rem}.status div{background:white;border-radius:16px;padding:1rem;border:1px solid #e8e5f0}.status b{display:block}.ok{color:#149144}.warn{background:#fff7ed;border:1px solid #fed7aa;border-radius:14px;padding:.8rem;color:#9a3412}.good{background:#ecfbf1;border:1px solid #c8efd4;border-radius:14px;padding:.8rem;color:#123d22}.summary{background:#faf9ff;border:1px solid #e9e1ff;border-radius:14px;padding:.8rem}.copy{text-align:center}.stButton>button{background:linear-gradient(135deg,#ff641f,#f58220)!important;color:white!important;border:0!important;border-radius:12px!important;padding:.75rem 2.4rem!important;font-weight:950!important}.recent table{width:100%;border-collapse:collapse}.recent th,.recent td{padding:.7rem;border-bottom:1px solid #e8e5f0;text-align:left}.footer{text-align:center;color:#6f6789;font-size:.84rem;padding:1rem}@media(max-width:900px){.hero,.status{grid-template-columns:1fr}.top{display:block}}
+:root{--orange:#ff661f;--blue:#0b4a8b;--ink:#26222b;--muted:#6d696f;--line:#e7e4e2;}
+.stApp{background:#fff;color:var(--ink)}
+.main .block-container{max-width:1280px;padding:1.1rem 1.7rem 2rem}
+header[data-testid="stHeader"]{background:transparent}
+section[data-testid="stSidebar"]{background:#fff;border-right:1px solid #e8e5e3}
+section[data-testid="stSidebar"] *{color:#4a4548!important}
+.brand{padding:1.2rem .8rem;text-align:center;border-bottom:1px solid #eee}.brand img{max-width:210px;max-height:92px;object-fit:contain}.brand-fallback{font-size:1.5rem;font-weight:900;color:var(--orange)!important}.neo{font-size:1rem;color:var(--blue)!important;font-weight:800}
+.menu{padding:.9rem 1rem;border-radius:8px;margin:.35rem 0;font-weight:700}.menu.active{background:#fff3ed;border-left:5px solid var(--orange);color:var(--orange)!important}.side-note{position:relative;margin-top:18rem;padding:1rem;border-radius:12px;background:#fafafa;border:1px solid #eee;font-size:.84rem}
+.topline{display:flex;justify-content:flex-end;gap:2rem;color:var(--orange);font-weight:700;margin-bottom:.5rem}.title h1{margin:0;font-size:2rem}.title p{margin:.25rem 0 1.2rem;color:var(--muted)}
+.panel{background:#fff;border:1px solid var(--line);border-radius:18px;padding:1.4rem;box-shadow:0 10px 28px rgba(49,36,28,.08)}
+.grid{display:grid;grid-template-columns:1fr 1.2fr;gap:2rem;align-items:start}
+.upload-title{font-size:1.05rem;font-weight:800;margin-bottom:.7rem}.upload-wrap div[data-testid="stFileUploader"] section{border:1.6px dashed var(--orange)!important;border-radius:12px;background:#fff!important;padding:2rem!important}.small{font-size:.82rem;color:var(--muted);text-align:center;margin-top:.4rem}
+.form-block label{font-weight:700!important}.summary{background:#fff7f2;border:1px solid #ffd2bc;border-radius:10px;padding:.75rem;margin-top:.65rem;color:#8c3b13}.selected{background:#edf9f0;border:1px solid #cfead6;border-radius:10px;padding:.75rem;margin-top:.65rem;color:#205c31}
+.stButton>button{background:var(--orange)!important;color:#fff!important;border:0!important;border-radius:8px!important;font-weight:800!important;padding:.75rem 2rem!important}.copy{text-align:center;margin-top:1rem}
+.splash-bg{position:fixed;inset:0;z-index:999999;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden}.splash-bg:before,.splash-bg:after{content:"";position:absolute;width:620px;height:230px;border-radius:50%;border:12px dotted rgba(255,102,31,.18);transform:rotate(18deg)}.splash-bg:before{left:-120px;top:150px}.splash-bg:after{right:-130px;top:120px}.splash-card{position:relative;z-index:2;width:min(650px,80vw);padding:4rem 3rem;text-align:center;border-radius:28px;background:#fff;border:1px solid #e5e1df;box-shadow:0 18px 45px rgba(0,0,0,.12)}.splash-card img{max-width:360px;max-height:130px;object-fit:contain}.splash-logo{font-size:2.6rem;font-weight:900;color:var(--orange)}.splash-sub{font-size:1.5rem;color:var(--blue);font-weight:800}.spinner{width:58px;height:58px;margin:2rem auto 1rem;border-radius:50%;border:8px solid #ffe4d7;border-top-color:var(--orange);animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+@media(max-width:900px){.grid{grid-template-columns:1fr}.side-note{margin-top:2rem}}
 </style>
-""")
+"""
+st.html(CSS)
 
 class CommandError(Exception):
     pass
-
-
-def audit(message: str, **kwargs) -> None:
-    details = " | ".join(f"{k}={v}" for k, v in kwargs.items())
-    logger.info("%s%s", message, f" | {details}" if details else "")
 
 
 def run_cmd(cmd: List[str], timeout: int = 60) -> str:
@@ -58,18 +67,6 @@ def run_cmd(cmd: List[str], timeout: int = 60) -> str:
     return result.stdout.strip()
 
 
-def runtime_info() -> tuple[str, str]:
-    if os.path.exists("/var/run/secrets/kubernetes.io/serviceaccount/token"):
-        ns = Path("/var/run/secrets/kubernetes.io/serviceaccount/namespace").read_text().strip()
-        return "In-Cluster", ns
-    return "Kubeconfig", run_cmd(["kubectl", "config", "current-context"])
-
-
-def allowed(namespace: str) -> None:
-    if ALLOWED_NAMESPACES and namespace not in ALLOWED_NAMESPACES:
-        raise CommandError(f"Namespace '{namespace}' is not allowed for file placement.")
-
-
 def get_namespaces() -> List[str]:
     if ALLOWED_NAMESPACES:
         return ALLOWED_NAMESPACES
@@ -78,13 +75,11 @@ def get_namespaces() -> List[str]:
 
 
 def get_pods(namespace: str) -> List[str]:
-    allowed(namespace)
     out = run_cmd(["kubectl", "get", "pods", "-n", namespace, "--no-headers", "-o", "custom-columns=:metadata.name"])
     return [x.strip() for x in out.splitlines() if x.strip()]
 
 
 def get_containers(namespace: str, pod: str) -> List[str]:
-    allowed(namespace)
     out = run_cmd(["kubectl", "get", "pod", pod, "-n", namespace, "-o", "jsonpath={.spec.containers[*].name}"])
     return [x.strip() for x in out.split() if x.strip()]
 
@@ -93,10 +88,7 @@ def safe_name(filename: str) -> str:
     return Path(filename).name.replace(" ", "_")
 
 
-def final_path(folder: str, filename: str) -> str:
-    folder = folder.strip() or "/tmp"
-    if not folder.startswith("/"):
-        raise CommandError("Destination folder must be an absolute path.")
+def destination_path(folder: str, filename: str) -> str:
     return f"{folder.rstrip('/')}/{safe_name(filename)}"
 
 
@@ -107,145 +99,131 @@ def copy_file(local_file: str, namespace: str, pod: str, dest: str, container: O
     run_cmd(cmd, timeout=300)
 
 
-def exec_ls(namespace: str, pod: str, path: str, container: Optional[str]) -> str:
+def verify(namespace: str, pod: str, dest: str, container: Optional[str]) -> str:
     cmd = ["kubectl", "exec", "-n", namespace]
     if container:
         cmd.extend(["-c", container])
-    cmd.extend([pod, "--", "ls", "-l", path])
+    cmd.extend([pod, "--", "ls", "-l", dest])
     return run_cmd(cmd)
 
 
-def logo(sidebar: bool = False) -> str:
+def logo_html() -> str:
     if MASHREQ_LOGO_URL:
-        tag = "<div class='tag'>Rise every day</div>" if sidebar else ""
-        return f"<img src='{MASHREQ_LOGO_URL}' alt='Mashreq logo'/>{tag}"
-    if sidebar:
-        return "<div class='name'>mashreq</div><div class='tag'>Rise every day</div>"
-    return "<div class='fallback'>mashreq<br><span style='color:#ffb15d;font-style:italic'>Rise every day</span></div>"
+        return f"<img src='{MASHREQ_LOGO_URL}' alt='Mashreq NEO CORP logo'>"
+    return "<div class='splash-logo'>mashreq المشـرق</div><div class='splash-sub'>NEO CORP</div>"
 
 
-def chips(values: List[str]) -> str:
-    values = values or ["All namespaces"]
-    return "".join(f"<span class='chip'>{v}</span>" for v in values)
-
-try:
-    mode, detail = runtime_info()
-    connected = True
-except Exception:
-    mode, detail, connected = "Unknown", "Unavailable", False
-    logger.exception("Unable to determine Kubernetes connection")
+if "splash_seen" not in st.session_state:
+    splash = st.empty()
+    splash.html(
+        "<div class='splash-bg'><div class='splash-card'>"
+        f"{logo_html()}"
+        "<div class='spinner'></div>"
+        "<div style='color:#6d696f'>Loading your workspace...</div>"
+        "</div></div>"
+    )
+    time.sleep(1)
+    splash.empty()
+    st.session_state.splash_seen = True
 
 with st.sidebar:
-    st.html(f"<div class='brand'>{logo(True)}</div>")
-    st.html(f"<div class='sidecard'><b>Dashboard</b><br><small>Upload files directly to approved Kubernetes namespaces.</small></div>")
-    st.html(f"<div class='sidecard'><b>Namespace Policy</b><br><br>{chips(ALLOWED_NAMESPACES)}</div>")
-    st.html(f"<div class='sidecard'><b>Logs</b><br><small>{LOG_PATH}</small></div>")
+    st.html(f"<div class='brand'>{logo_html()}</div>")
+    st.html("<div class='menu active'>☁ File Placement</div>")
+    st.html("<div class='side-note'><b>Namespace Policy</b><br><br>Uploads are limited to approved namespaces.<br><br><small>Logs: " + LOG_PATH + "</small></div>")
 
-st.html(f"<div class='top'><div><h1>File Placement Dashboard</h1><p>Internal DevOps Platform</p></div><div class='conn'><b>{'Connected to Kubernetes' if connected else 'Connection unavailable'}</b><br><small>Mode: {mode} | Namespace: {detail}</small></div></div>")
-st.html(f"<div class='hero'><div>{logo(False)}</div><div><h2>Secure file placement</h2><p>Upload approved files directly into Kubernetes pods with controlled access and verification.</p></div></div>")
-st.html("<div class='status'><div><b>Kubernetes</b><span class='ok'>Connected</span></div><div><b>RBAC</b><span class='ok'>Verified</span></div><div><b>Namespace Policy</b><span class='ok'>Restricted</span></div><div><b>Ready to Upload</b><span class='ok'>Ready</span></div></div>")
+st.html("<div class='topline'><span>English⌄</span><span>Customer Care</span></div>")
+st.html("<div class='title'><h1>File Placement</h1><p>Securely upload and place files inside Kubernetes pods</p></div>")
+st.html("<div class='panel'><div class='grid'>")
 
-st.html("<div class='card'><h3>Upload File</h3>")
-uploaded_file = st.file_uploader("Upload file", type=None, label_visibility="collapsed")
-st.html(f"<small>Maximum file size: {MAX_UPLOAD_MB} MB</small></div>")
+left, right = st.columns([1, 1.2], gap="large")
+with left:
+    st.html("<div class='upload-title'>Upload File</div>")
+    st.html("<div class='upload-wrap'>")
+    uploaded_file = st.file_uploader("Upload file", label_visibility="collapsed")
+    st.html(f"<div class='small'>Maximum file size: {MAX_UPLOAD_MB} MB</div></div>")
 
-st.html("<div class='card'><h3>Placement Details</h3>")
-try:
-    namespaces = get_namespaces()
-except Exception as exc:
-    namespaces = []
-    st.error(f"Unable to load namespaces: {exc}")
-
-namespace = st.selectbox("Namespace", namespaces, index=0 if namespaces else None)
-selected_pod = None
-selected_container = None
-containers: List[str] = []
-
-if namespace:
+with right:
+    st.html("<div class='form-block'>")
     try:
-        pods = get_pods(namespace)
-        if pods:
+        namespaces = get_namespaces()
+    except Exception as exc:
+        namespaces = []
+        st.error(f"Unable to load namespaces: {exc}")
+
+    namespace = st.selectbox("Namespace", namespaces, index=None, placeholder="Select Namespace")
+    selected_pod = None
+    selected_container = None
+    containers: List[str] = []
+
+    if namespace:
+        try:
+            pods = get_pods(namespace)
             selected_pod = st.selectbox(
-                "Search and select pod",
+                "Pod",
                 pods,
                 index=None,
-                placeholder="Start typing pod name, then select one",
+                placeholder="Type to search and select pod",
             )
             if selected_pod:
                 containers = get_containers(namespace, selected_pod)
-                st.html(f"<div class='good'><b>Selected Pod</b><br>{selected_pod}</div>")
-        else:
-            st.html("<div class='warn'>No pods found in this namespace.</div>")
-    except Exception as exc:
-        st.error(f"Unable to load pods: {exc}")
+                st.html(f"<div class='selected'><b>Selected Pod</b><br>{selected_pod}</div>")
+        except Exception as exc:
+            st.error(f"Unable to load pods: {exc}")
+    else:
+        st.selectbox("Pod", [], index=None, placeholder="Select namespace first", disabled=True)
 
-if selected_pod and len(containers) > 1:
-    with st.expander("Advanced options", expanded=True):
-        selected = st.selectbox("Container", ["<default>"] + containers)
-        selected_container = None if selected == "<default>" else selected
-elif selected_pod and len(containers) == 1:
-    st.caption(f"Container: {containers[0]}")
+    folder = st.selectbox("Destination Folder", DESTINATION_FOLDERS, index=None, placeholder="Select destination folder inside the pod")
 
-destination_folder = st.text_input("Destination folder", value="/tmp", placeholder="Example: /opt/app/config")
-if uploaded_file:
-    try:
-        st.html(f"<div class='summary'><b>Final destination</b><br>{final_path(destination_folder, uploaded_file.name)}</div>")
-    except Exception as exc:
-        st.html(f"<div class='warn'>{exc}</div>")
+    if selected_pod and len(containers) > 1:
+        with st.expander("Advanced options"):
+            choice = st.selectbox("Container", ["<default>"] + containers)
+            selected_container = None if choice == "<default>" else choice
+
+    if uploaded_file and folder:
+        st.html(f"<div class='summary'><b>Final destination</b><br>{destination_path(folder, uploaded_file.name)}</div>")
+
+    st.html("</div>")
+
 st.html("</div>")
-
 st.html("<div class='copy'>")
-copy_clicked = st.button("Copy File to Pod", type="primary")
-st.html("</div>")
+copy_clicked = st.button("Upload and Copy File", type="primary")
+st.html("</div></div>")
 
-recent_rows = []
 if copy_clicked:
     if not uploaded_file:
-        st.error("Please upload a file first.")
+        st.error("Please upload a file.")
         st.stop()
     if not namespace:
         st.error("Please select a namespace.")
         st.stop()
     if not selected_pod:
-        st.error("Please search and select a pod.")
+        st.error("Please select a pod.")
         st.stop()
-    try:
-        dest = final_path(destination_folder, uploaded_file.name)
-        size_mb = len(uploaded_file.getvalue()) / (1024 * 1024)
-        if size_mb > MAX_UPLOAD_MB:
-            st.error(f"File is too large. Limit is {MAX_UPLOAD_MB} MB.")
-            st.stop()
-        name = safe_name(uploaded_file.name)
-        audit("Upload copy requested", file=name, namespace=namespace, pod=selected_pod, container=selected_container or "default", destination=dest)
-        with tempfile.TemporaryDirectory() as tmpdir:
-            local_path = os.path.join(tmpdir, name)
-            with open(local_path, "wb") as f:
-                f.write(uploaded_file.getvalue())
-            with st.status("Copying file to pod...", expanded=True) as status:
-                st.write(f"Source: {name}")
-                st.write(f"Target: {namespace}/{selected_pod}:{dest}")
-                st.write(f"Container: {selected_container or '<default>'}")
+    if not folder:
+        st.error("Please select a destination folder.")
+        st.stop()
+
+    size_mb = len(uploaded_file.getvalue()) / (1024 * 1024)
+    if size_mb > MAX_UPLOAD_MB:
+        st.error(f"File is too large. Maximum allowed size is {MAX_UPLOAD_MB} MB.")
+        st.stop()
+
+    name = safe_name(uploaded_file.name)
+    dest = destination_path(folder, name)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        local_path = os.path.join(tmpdir, name)
+        with open(local_path, "wb") as handle:
+            handle.write(uploaded_file.getvalue())
+        try:
+            with st.status("Uploading and copying file...", expanded=True) as status:
+                st.write(f"Namespace: {namespace}")
+                st.write(f"Pod: {selected_pod}")
+                st.write(f"Destination: {dest}")
                 copy_file(local_path, namespace, selected_pod, dest, selected_container)
-                st.write("Verification result:")
-                st.code(exec_ls(namespace, selected_pod, dest, selected_container))
-                status.update(label="File copied and verified", state="complete")
-        audit("Upload copy completed", file=name, namespace=namespace, pod=selected_pod, container=selected_container or "default", destination=dest)
-        st.success("File copied successfully.")
-        recent_rows.append((datetime.now().strftime("%Y-%m-%d %H:%M:%S"), namespace, selected_pod, name, "Success"))
-    except Exception as exc:
-        logger.exception("Copy failed")
-        st.error(f"Copy failed: {exc}")
-        st.info("kubectl cp requires tar inside the target container.")
-
-rows = "".join(f"<tr><td>{t}</td><td>{ns}</td><td>{pod}</td><td>{file}</td><td>{status}</td></tr>" for t, ns, pod, file, status in recent_rows)
-if not rows:
-    rows = "<tr><td colspan='5'>No upload activity in this UI session yet.</td></tr>"
-st.html(f"<div class='card recent'><h3>Recent Activity</h3><table><thead><tr><th>Time</th><th>Namespace</th><th>Pod</th><th>File</th><th>Status</th></tr></thead><tbody>{rows}</tbody></table><small>Container log file: {LOG_PATH}</small></div>")
-
-try:
-    with open(LOG_PATH, "r", encoding="utf-8") as f:
-        st.download_button("Download Logs", data=f.read(), file_name=LOG_FILE, mime="text/plain")
-except Exception:
-    pass
-
-st.html(f"<div class='footer'><span>Secure. Compliant. Reliable.</span><span>Mashreq Internal DevOps Platform</span><span>Version {APP_VERSION}</span></div>")
+                st.code(verify(namespace, selected_pod, dest, selected_container))
+                status.update(label="File uploaded and verified", state="complete")
+            logger.info("Upload completed | namespace=%s | pod=%s | file=%s | destination=%s", namespace, selected_pod, name, dest)
+            st.success("File uploaded successfully.")
+        except Exception as exc:
+            logger.exception("Upload failed")
+            st.error(f"Upload failed: {exc}")
