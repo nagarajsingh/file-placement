@@ -64,11 +64,28 @@ section[data-testid="stSidebar"]>div{{width:290px!important}} div[data-testid="s
 .splash:before,.splash:after{{content:"";position:absolute;width:48vw;height:260px;opacity:.28;background-image:radial-gradient(circle,var(--orange) 2px,transparent 2.6px);background-size:14px 14px;transform:rotate(12deg);border-radius:50%}}
 .splash:before{{left:-8vw;top:20vh}} .splash:after{{right:-8vw;top:18vh;transform:rotate(-12deg)}}
 .splash-card{{position:relative;z-index:2;width:min(590px,82vw);min-height:330px;background:#fff;border:1px solid #e5e5e5;border-radius:42px;box-shadow:0 18px 48px rgba(0,0,0,.12);display:flex;flex-direction:column;align-items:center;justify-content:center}}
-.splash-card img{{max-width:360px;max-height:125px;object-fit:contain}} .spinner{{width:72px;height:72px;margin-top:1.5rem;border:8px dotted #ffc6a7;border-top-color:var(--orange);border-radius:50%;animation:spin .8s linear infinite}}
+.splash-brand{{position:relative;display:flex;align-items:center;justify-content:center;min-height:125px;width:100%}}
+.splash-fallback{{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}}
+.splash-logo-text{{font-size:3.15rem;font-weight:900;color:#185aa6;letter-spacing:-.05em;line-height:1}}
+.splash-logo-tag{{margin-top:.35rem;color:#ff4b12;font-size:1.15rem;font-style:italic}}
+.splash-card img{{position:relative;z-index:2;max-width:360px;max-height:125px;object-fit:contain;background:#fff}}
+.spinner{{width:72px;height:72px;margin-top:1.5rem;border:8px dotted #ffc6a7;border-top-color:var(--orange);border-radius:50%;animation:spin .8s linear infinite}}
 .splash-text{{margin-top:1rem;color:#666}} @keyframes spin{{to{{transform:rotate(360deg)}}}} @keyframes splashHide{{0%,82%{{opacity:1;visibility:visible}}100%{{opacity:0;visibility:hidden;pointer-events:none}}}}
 @media(max-width:900px){{.workspace{{grid-template-columns:1fr}}.upload-pane{{border-right:0;border-bottom:1px solid #eee;padding-right:0;padding-bottom:1.5rem}}}}
 </style>
-<div class="splash"><div class="splash-card"><img src="{MASHREQ_LOGO_URL}" alt="Mashreq NEO CORP"><div class="spinner"></div><div class="splash-text">Loading your workspace...</div></div></div>
+<div class="splash">
+  <div class="splash-card">
+    <div class="splash-brand">
+      <div class="splash-fallback">
+        <div class="splash-logo-text">mashreq</div>
+        <div class="splash-logo-tag">Rise every day</div>
+      </div>
+      <img src="{MASHREQ_LOGO_URL}" alt="Mashreq NEO CORP" onerror="this.style.display='none'">
+    </div>
+    <div class="spinner"></div>
+    <div class="splash-text">Loading your workspace...</div>
+  </div>
+</div>
 """)
 
 
