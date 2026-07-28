@@ -2,7 +2,6 @@ import logging
 import os
 import subprocess
 import tempfile
-import time
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import List, Optional
@@ -13,46 +12,65 @@ APP_TITLE = "File Placement"
 MAX_UPLOAD_MB = int(os.getenv("MAX_UPLOAD_MB", "50"))
 LOG_DIR = os.getenv("LOG_DIR", "/app/logs")
 LOG_FILE = os.getenv("LOG_FILE", "file-placement-dashboard.log")
-MASHREQ_LOGO_URL = os.getenv("MASHREQ_LOGO_URL", "")
+LOG_PATH = str(Path(LOG_DIR) / LOG_FILE)
+MASHREQ_LOGO_URL = os.getenv(
+    "MASHREQ_LOGO_URL",
+    "https://www.mashreq.com/-/jssmedia/Images/logos-mobile/Neo-logo-mob-en.ashx?iar=0&hash=2C256BD0300FBC5E02CD7BEA04AC281F",
+)
 ALLOWED_NAMESPACES = [x.strip() for x in os.getenv("ALLOWED_NAMESPACES", "").split(",") if x.strip()]
 DESTINATION_FOLDERS = [x.strip() for x in os.getenv("DESTINATION_FOLDERS", "/tmp").split(",") if x.strip()]
 
 Path(LOG_DIR).mkdir(parents=True, exist_ok=True)
-LOG_PATH = str(Path(LOG_DIR) / LOG_FILE)
 logger = logging.getLogger("file-placement")
 logger.setLevel(logging.INFO)
 logger.handlers.clear()
-fmt = logging.Formatter("%(asctime)s | %(levelname)s | %(message)s")
-fh = RotatingFileHandler(LOG_PATH, maxBytes=5 * 1024 * 1024, backupCount=5)
-fh.setFormatter(fmt)
-sh = logging.StreamHandler()
-sh.setFormatter(fmt)
-logger.addHandler(fh)
-logger.addHandler(sh)
+formatter = logging.Formatter("%(asctime)s | %(levelname)s | %(message)s")
+file_handler = RotatingFileHandler(LOG_PATH, maxBytes=5 * 1024 * 1024, backupCount=5)
+file_handler.setFormatter(formatter)
+console_handler = logging.StreamHandler()
+console_handler.setFormatter(formatter)
+logger.addHandler(file_handler)
+logger.addHandler(console_handler)
 
-st.set_page_config(page_title=APP_TITLE, page_icon="📁", layout="wide")
+st.set_page_config(page_title=APP_TITLE, page_icon="📤", layout="wide", initial_sidebar_state="expanded")
 
-CSS = """
+st.html(f"""
 <style>
-:root{--orange:#ff661f;--blue:#0b4a8b;--ink:#26222b;--muted:#6d696f;--line:#e7e4e2;}
-.stApp{background:#fff;color:var(--ink)}
-.main .block-container{max-width:1280px;padding:1.1rem 1.7rem 2rem}
-header[data-testid="stHeader"]{background:transparent}
-section[data-testid="stSidebar"]{background:#fff;border-right:1px solid #e8e5e3}
-section[data-testid="stSidebar"] *{color:#4a4548!important}
-.brand{padding:1.2rem .8rem;text-align:center;border-bottom:1px solid #eee}.brand img{max-width:210px;max-height:92px;object-fit:contain}.brand-fallback{font-size:1.5rem;font-weight:900;color:var(--orange)!important}.neo{font-size:1rem;color:var(--blue)!important;font-weight:800}
-.menu{padding:.9rem 1rem;border-radius:8px;margin:.35rem 0;font-weight:700}.menu.active{background:#fff3ed;border-left:5px solid var(--orange);color:var(--orange)!important}.side-note{position:relative;margin-top:18rem;padding:1rem;border-radius:12px;background:#fafafa;border:1px solid #eee;font-size:.84rem}
-.topline{display:flex;justify-content:flex-end;gap:2rem;color:var(--orange);font-weight:700;margin-bottom:.5rem}.title h1{margin:0;font-size:2rem}.title p{margin:.25rem 0 1.2rem;color:var(--muted)}
-.panel{background:#fff;border:1px solid var(--line);border-radius:18px;padding:1.4rem;box-shadow:0 10px 28px rgba(49,36,28,.08)}
-.grid{display:grid;grid-template-columns:1fr 1.2fr;gap:2rem;align-items:start}
-.upload-title{font-size:1.05rem;font-weight:800;margin-bottom:.7rem}.upload-wrap div[data-testid="stFileUploader"] section{border:1.6px dashed var(--orange)!important;border-radius:12px;background:#fff!important;padding:2rem!important}.small{font-size:.82rem;color:var(--muted);text-align:center;margin-top:.4rem}
-.form-block label{font-weight:700!important}.summary{background:#fff7f2;border:1px solid #ffd2bc;border-radius:10px;padding:.75rem;margin-top:.65rem;color:#8c3b13}.selected{background:#edf9f0;border:1px solid #cfead6;border-radius:10px;padding:.75rem;margin-top:.65rem;color:#205c31}
-.stButton>button{background:var(--orange)!important;color:#fff!important;border:0!important;border-radius:8px!important;font-weight:800!important;padding:.75rem 2rem!important}.copy{text-align:center;margin-top:1rem}
-.splash-bg{position:fixed;inset:0;z-index:999999;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden}.splash-bg:before,.splash-bg:after{content:"";position:absolute;width:620px;height:230px;border-radius:50%;border:12px dotted rgba(255,102,31,.18);transform:rotate(18deg)}.splash-bg:before{left:-120px;top:150px}.splash-bg:after{right:-130px;top:120px}.splash-card{position:relative;z-index:2;width:min(650px,80vw);padding:4rem 3rem;text-align:center;border-radius:28px;background:#fff;border:1px solid #e5e1df;box-shadow:0 18px 45px rgba(0,0,0,.12)}.splash-card img{max-width:360px;max-height:130px;object-fit:contain}.splash-logo{font-size:2.6rem;font-weight:900;color:var(--orange)}.splash-sub{font-size:1.5rem;color:var(--blue);font-weight:800}.spinner{width:58px;height:58px;margin:2rem auto 1rem;border-radius:50%;border:8px solid #ffe4d7;border-top-color:var(--orange);animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
-@media(max-width:900px){.grid{grid-template-columns:1fr}.side-note{margin-top:2rem}}
+:root{{--orange:#ff651f;--orange2:#f58220;--ink:#171717;--muted:#686868;--line:#e7e7e7;}}
+*{{box-sizing:border-box}} .stApp{{background:#fff;color:var(--ink)}}
+header[data-testid="stHeader"]{{display:none}} .main .block-container{{max-width:none;padding:1.3rem 2rem 2rem}}
+section[data-testid="stSidebar"]{{background:#fff;border-right:1px solid #e5e5e5;width:290px!important}}
+section[data-testid="stSidebar"]>div{{width:290px!important}} div[data-testid="stSidebarUserContent"]{{padding:1rem .8rem}}
+[data-testid="stSidebarCollapseButton"]{{display:none}}
+.neo-logo{{padding:1rem .6rem 1.4rem;text-align:center;border-bottom:1px solid #eee}}
+.neo-logo img{{max-width:215px;max-height:82px;object-fit:contain}}
+.nav-active{{margin:1.1rem 0 .4rem;border-left:5px solid var(--orange);background:linear-gradient(90deg,#fff2ea,#fff);padding:1rem 1.1rem;border-radius:0 12px 12px 0;color:var(--orange);font-weight:800}}
+.side-section{{padding:1rem 1.05rem;margin-top:.55rem;border-radius:12px;color:#555}}
+.side-section b{{display:block;color:#222;margin-bottom:.45rem}} .chips{{display:flex;flex-wrap:wrap;gap:.35rem}}
+.chip{{padding:.3rem .55rem;border-radius:999px;background:#fff2ea;color:#d94d09;font-size:.74rem;font-weight:700}}
+.side-log{{font-size:.75rem;color:#777;word-break:break-all}}
+.top-tools{{display:flex;justify-content:flex-end;gap:2rem;color:var(--orange);font-weight:700;margin-bottom:1.4rem}}
+.page-title h1{{font-size:2rem;margin:0;color:#171717}} .page-title p{{margin:.3rem 0 1.4rem;color:#5f5f5f;font-size:1rem}}
+.workspace{{background:#fff;border:1px solid #e8e8e8;border-radius:22px;box-shadow:0 12px 34px rgba(0,0,0,.08);padding:1.6rem;display:grid;grid-template-columns:.9fr 1.1fr;gap:2rem}}
+.upload-pane{{border-right:1px solid #ececec;padding-right:2rem}} .pane-title{{font-size:1.05rem;font-weight:800;margin-bottom:.8rem}}
+[data-testid="stFileUploader"] section{{min-height:210px;border:1.6px dashed var(--orange)!important;border-radius:14px;background:#fff!important;padding:2.3rem!important}}
+[data-testid="stFileUploader"] button{{border:1px solid var(--orange)!important;color:var(--orange)!important;background:#fff!important;border-radius:8px!important}}
+.small-note{{text-align:center;color:#777;font-size:.8rem;margin-top:.6rem}}
+.field-note{{color:#777;font-size:.78rem;margin-top:.25rem}} .selected-card{{background:#effbf4;border:1px solid #cdeed9;border-radius:10px;padding:.7rem .85rem;color:#166534;margin-top:.55rem}}
+.copy-wrap{{text-align:center;margin-top:1.25rem}} .stButton>button{{width:100%;background:linear-gradient(90deg,var(--orange),#ff7d21)!important;color:#fff!important;border:0!important;border-radius:9px!important;padding:.8rem 1rem!important;font-weight:800!important;font-size:1rem!important}}
+.status-box{{margin-top:1rem}} .success-card{{background:#effbf4;border:1px solid #ccefd8;border-radius:12px;padding:1rem;color:#166534}}
+.footer{{text-align:center;color:#888;font-size:.78rem;padding:1.5rem 0 .3rem}}
+.splash{{position:fixed;inset:0;z-index:999999;background:#fff;display:flex;align-items:center;justify-content:center;animation:splashHide 1.15s forwards}}
+.splash:before,.splash:after{{content:"";position:absolute;width:48vw;height:260px;opacity:.28;background-image:radial-gradient(circle,var(--orange) 2px,transparent 2.6px);background-size:14px 14px;transform:rotate(12deg);border-radius:50%}}
+.splash:before{{left:-8vw;top:20vh}} .splash:after{{right:-8vw;top:18vh;transform:rotate(-12deg)}}
+.splash-card{{position:relative;z-index:2;width:min(590px,82vw);min-height:330px;background:#fff;border:1px solid #e5e5e5;border-radius:42px;box-shadow:0 18px 48px rgba(0,0,0,.12);display:flex;flex-direction:column;align-items:center;justify-content:center}}
+.splash-card img{{max-width:360px;max-height:125px;object-fit:contain}} .spinner{{width:72px;height:72px;margin-top:1.5rem;border:8px dotted #ffc6a7;border-top-color:var(--orange);border-radius:50%;animation:spin .8s linear infinite}}
+.splash-text{{margin-top:1rem;color:#666}} @keyframes spin{{to{{transform:rotate(360deg)}}}} @keyframes splashHide{{0%,82%{{opacity:1;visibility:visible}}100%{{opacity:0;visibility:hidden;pointer-events:none}}}}
+@media(max-width:900px){{.workspace{{grid-template-columns:1fr}}.upload-pane{{border-right:0;border-bottom:1px solid #eee;padding-right:0;padding-bottom:1.5rem}}}}
 </style>
-"""
-st.html(CSS)
+<div class="splash"><div class="splash-card"><img src="{MASHREQ_LOGO_URL}" alt="Mashreq NEO CORP"><div class="spinner"></div><div class="splash-text">Loading your workspace...</div></div></div>
+""")
+
 
 class CommandError(Exception):
     pass
@@ -61,169 +79,129 @@ class CommandError(Exception):
 def run_cmd(cmd: List[str], timeout: int = 60) -> str:
     result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, check=False)
     if result.returncode != 0:
-        msg = result.stderr.strip() or result.stdout.strip() or "Command failed"
-        logger.error("Command failed | command=%s | error=%s", " ".join(cmd), msg)
-        raise CommandError(msg)
+        message = result.stderr.strip() or result.stdout.strip() or "Command failed"
+        logger.error("Command failed | command=%s | error=%s", " ".join(cmd), message)
+        raise CommandError(message)
     return result.stdout.strip()
 
 
 def get_namespaces() -> List[str]:
     if ALLOWED_NAMESPACES:
         return ALLOWED_NAMESPACES
-    out = run_cmd(["kubectl", "get", "namespaces", "--no-headers", "-o", "custom-columns=:metadata.name"])
-    return [x.strip() for x in out.splitlines() if x.strip()]
+    output = run_cmd(["kubectl", "get", "namespaces", "--no-headers", "-o", "custom-columns=:metadata.name"])
+    return [x.strip() for x in output.splitlines() if x.strip()]
 
 
 def get_pods(namespace: str) -> List[str]:
-    out = run_cmd(["kubectl", "get", "pods", "-n", namespace, "--no-headers", "-o", "custom-columns=:metadata.name"])
-    return [x.strip() for x in out.splitlines() if x.strip()]
+    output = run_cmd(["kubectl", "get", "pods", "-n", namespace, "--no-headers", "-o", "custom-columns=:metadata.name"])
+    return [x.strip() for x in output.splitlines() if x.strip()]
 
 
 def get_containers(namespace: str, pod: str) -> List[str]:
-    out = run_cmd(["kubectl", "get", "pod", pod, "-n", namespace, "-o", "jsonpath={.spec.containers[*].name}"])
-    return [x.strip() for x in out.split() if x.strip()]
+    output = run_cmd(["kubectl", "get", "pod", pod, "-n", namespace, "-o", "jsonpath={.spec.containers[*].name}"])
+    return [x.strip() for x in output.split() if x.strip()]
 
 
 def safe_name(filename: str) -> str:
     return Path(filename).name.replace(" ", "_")
 
 
-def destination_path(folder: str, filename: str) -> str:
-    return f"{folder.rstrip('/')}/{safe_name(filename)}"
-
-
-def copy_file(local_file: str, namespace: str, pod: str, dest: str, container: Optional[str]) -> None:
-    cmd = ["kubectl", "cp", local_file, f"{namespace}/{pod}:{dest}"]
+def copy_file(local_path: str, namespace: str, pod: str, destination: str, container: Optional[str]) -> None:
+    cmd = ["kubectl", "cp", local_path, f"{namespace}/{pod}:{destination}"]
     if container:
         cmd.extend(["-c", container])
     run_cmd(cmd, timeout=300)
 
 
-def verify(namespace: str, pod: str, dest: str, container: Optional[str]) -> str:
+def verify_file(namespace: str, pod: str, destination: str, container: Optional[str]) -> str:
     cmd = ["kubectl", "exec", "-n", namespace]
     if container:
         cmd.extend(["-c", container])
-    cmd.extend([pod, "--", "ls", "-l", dest])
+    cmd.extend([pod, "--", "ls", "-l", destination])
     return run_cmd(cmd)
 
 
-def logo_html() -> str:
-    if MASHREQ_LOGO_URL:
-        return f"<img src='{MASHREQ_LOGO_URL}' alt='Mashreq NEO CORP logo'>"
-    return "<div class='splash-logo'>mashreq المشـرق</div><div class='splash-sub'>NEO CORP</div>"
-
-
-if "splash_seen" not in st.session_state:
-    splash = st.empty()
-    splash.html(
-        "<div class='splash-bg'><div class='splash-card'>"
-        f"{logo_html()}"
-        "<div class='spinner'></div>"
-        "<div style='color:#6d696f'>Loading your workspace...</div>"
-        "</div></div>"
-    )
-    time.sleep(1)
-    splash.empty()
-    st.session_state.splash_seen = True
-
 with st.sidebar:
-    st.html(f"<div class='brand'>{logo_html()}</div>")
-    st.html("<div class='menu active'>☁ File Placement</div>")
-    st.html("<div class='side-note'><b>Namespace Policy</b><br><br>Uploads are limited to approved namespaces.<br><br><small>Logs: " + LOG_PATH + "</small></div>")
+    st.html(f'<div class="neo-logo"><img src="{MASHREQ_LOGO_URL}" alt="Mashreq NEO CORP"></div>')
+    st.html('<div class="nav-active">☁ &nbsp; File Placement</div>')
+    st.html(f'<div class="side-section"><b>Namespace Policy</b><div class="chips">{"".join(f"<span class=\"chip\">{n}</span>" for n in ALLOWED_NAMESPACES) or "<span class=\"chip\">RBAC controlled</span>"}</div></div>')
+    st.html(f'<div class="side-section"><b>Application Logs</b><div class="side-log">{LOG_PATH}</div></div>')
 
-st.html("<div class='topline'><span>English⌄</span><span>Customer Care</span></div>")
-st.html("<div class='title'><h1>File Placement</h1><p>Securely upload and place files inside Kubernetes pods</p></div>")
-st.html("<div class='panel'><div class='grid'>")
+st.html('<div class="top-tools"><span>English⌄</span><span>☏ Customer Care</span></div>')
+st.html('<div class="page-title"><h1>File Placement</h1><p>Securely upload and place files inside Kubernetes pods</p></div>')
+st.html('<div class="workspace"><div class="upload-pane"><div class="pane-title">Upload File</div>')
+uploaded_file = st.file_uploader("Upload file", type=None, label_visibility="collapsed")
+st.html(f'<div class="small-note">Maximum file size: {MAX_UPLOAD_MB} MB</div></div><div>')
 
-left, right = st.columns([1, 1.2], gap="large")
-with left:
-    st.html("<div class='upload-title'>Upload File</div>")
-    st.html("<div class='upload-wrap'>")
-    uploaded_file = st.file_uploader("Upload file", label_visibility="collapsed")
-    st.html(f"<div class='small'>Maximum file size: {MAX_UPLOAD_MB} MB</div></div>")
+try:
+    namespaces = get_namespaces()
+except Exception as exc:
+    namespaces = []
+    st.error(f"Unable to load namespaces: {exc}")
 
-with right:
-    st.html("<div class='form-block'>")
+namespace = st.selectbox("Namespace", namespaces, index=None, placeholder="Select Namespace")
+selected_pod = None
+containers: List[str] = []
+selected_container: Optional[str] = None
+
+if namespace:
     try:
-        namespaces = get_namespaces()
+        pods = get_pods(namespace)
+        selected_pod = st.selectbox("Pod", pods, index=None, placeholder="Type to search and select pod")
+        if selected_pod:
+            containers = get_containers(namespace, selected_pod)
+            st.html(f'<div class="selected-card">Selected pod: <b>{selected_pod}</b></div>')
     except Exception as exc:
-        namespaces = []
-        st.error(f"Unable to load namespaces: {exc}")
+        st.error(f"Unable to load pods: {exc}")
 
-    namespace = st.selectbox("Namespace", namespaces, index=None, placeholder="Select Namespace")
-    selected_pod = None
-    selected_container = None
-    containers: List[str] = []
+if selected_pod and len(containers) > 1:
+    selected_container = st.selectbox("Container", containers, index=0)
 
-    if namespace:
-        try:
-            pods = get_pods(namespace)
-            selected_pod = st.selectbox(
-                "Pod",
-                pods,
-                index=None,
-                placeholder="Type to search and select pod",
-            )
-            if selected_pod:
-                containers = get_containers(namespace, selected_pod)
-                st.html(f"<div class='selected'><b>Selected Pod</b><br>{selected_pod}</div>")
-        except Exception as exc:
-            st.error(f"Unable to load pods: {exc}")
-    else:
-        st.selectbox("Pod", [], index=None, placeholder="Select namespace first", disabled=True)
-
-    folder = st.selectbox("Destination Folder", DESTINATION_FOLDERS, index=None, placeholder="Select destination folder inside the pod")
-
-    if selected_pod and len(containers) > 1:
-        with st.expander("Advanced options"):
-            choice = st.selectbox("Container", ["<default>"] + containers)
-            selected_container = None if choice == "<default>" else choice
-
-    if uploaded_file and folder:
-        st.html(f"<div class='summary'><b>Final destination</b><br>{destination_path(folder, uploaded_file.name)}</div>")
-
-    st.html("</div>")
-
-st.html("</div>")
-st.html("<div class='copy'>")
-copy_clicked = st.button("Upload and Copy File", type="primary")
-st.html("</div></div>")
+destination_folder = st.selectbox("Destination Folder", DESTINATION_FOLDERS, index=None, placeholder="Select destination folder inside the pod")
+overwrite = st.checkbox("Overwrite if file exists", value=False)
+st.html('<div class="copy-wrap">')
+copy_clicked = st.button("⇧  Upload and Copy File", type="primary")
+st.html('</div></div></div>')
 
 if copy_clicked:
     if not uploaded_file:
         st.error("Please upload a file.")
         st.stop()
-    if not namespace:
-        st.error("Please select a namespace.")
-        st.stop()
-    if not selected_pod:
-        st.error("Please select a pod.")
-        st.stop()
-    if not folder:
-        st.error("Please select a destination folder.")
+    if not namespace or not selected_pod or not destination_folder:
+        st.error("Select namespace, pod, and destination folder.")
         st.stop()
 
+    filename = safe_name(uploaded_file.name)
+    destination = f"{destination_folder.rstrip('/')}/{filename}"
     size_mb = len(uploaded_file.getvalue()) / (1024 * 1024)
     if size_mb > MAX_UPLOAD_MB:
-        st.error(f"File is too large. Maximum allowed size is {MAX_UPLOAD_MB} MB.")
+        st.error(f"File exceeds the {MAX_UPLOAD_MB} MB limit.")
         st.stop()
 
-    name = safe_name(uploaded_file.name)
-    dest = destination_path(folder, name)
-    with tempfile.TemporaryDirectory() as tmpdir:
-        local_path = os.path.join(tmpdir, name)
+    if not overwrite:
+        check_cmd = ["kubectl", "exec", "-n", namespace]
+        if selected_container:
+            check_cmd.extend(["-c", selected_container])
+        check_cmd.extend([selected_pod, "--", "test", "-e", destination])
+        exists = subprocess.run(check_cmd, capture_output=True, check=False).returncode == 0
+        if exists:
+            st.error("File already exists. Enable overwrite to replace it.")
+            st.stop()
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        local_path = os.path.join(temp_dir, filename)
         with open(local_path, "wb") as handle:
             handle.write(uploaded_file.getvalue())
         try:
-            with st.status("Uploading and copying file...", expanded=True) as status:
-                st.write(f"Namespace: {namespace}")
-                st.write(f"Pod: {selected_pod}")
-                st.write(f"Destination: {dest}")
-                copy_file(local_path, namespace, selected_pod, dest, selected_container)
-                st.code(verify(namespace, selected_pod, dest, selected_container))
-                status.update(label="File uploaded and verified", state="complete")
-            logger.info("Upload completed | namespace=%s | pod=%s | file=%s | destination=%s", namespace, selected_pod, name, dest)
-            st.success("File uploaded successfully.")
+            with st.status("Uploading and placing file...", expanded=True) as status:
+                copy_file(local_path, namespace, selected_pod, destination, selected_container)
+                verification = verify_file(namespace, selected_pod, destination, selected_container)
+                st.code(verification)
+                status.update(label="File placed successfully", state="complete")
+            logger.info("Upload success | namespace=%s | pod=%s | file=%s | destination=%s", namespace, selected_pod, filename, destination)
+            st.html(f'<div class="status-box"><div class="success-card"><b>Upload completed</b><br>{namespace} / {selected_pod}<br>{destination}</div></div>')
         except Exception as exc:
             logger.exception("Upload failed")
             st.error(f"Upload failed: {exc}")
+
+st.html('<div class="footer">Mashreq NEO CORP · Internal DevOps File Placement</div>')
